@@ -1,0 +1,68 @@
+import customtkinter as ctk
+
+from shared.config import (
+    BG_COLOR, PANEL_BG, BORDER_COLOR, INPUT_BG, 
+    PRIMARY_BTN, PRIMARY_BTN_HOVER, TEXT_MUTED
+)
+
+class LoginMixin:
+    def show_login_frame(self):
+        # Background canvas to allow centering
+        self.login_bg = ctk.CTkFrame(self, fg_color=BG_COLOR, corner_radius=0)
+        self.login_bg.grid(row=0, column=0, sticky="nsew")
+        self.login_bg.grid_columnconfigure(0, weight=1)
+        self.login_bg.grid_rowconfigure(0, weight=1)
+
+        # Central Card
+        self.login_card = ctk.CTkFrame(self.login_bg, fg_color=PANEL_BG, 
+                                        width=400, height=450, corner_radius=25,
+                                        border_width=1, border_color=BORDER_COLOR)
+        self.login_card.grid(row=0, column=0, padx=40, pady=40)
+        self.login_card.grid_propagate(False)
+        self.login_card.grid_columnconfigure(0, weight=1)
+
+        # Header Section
+        ctk.CTkLabel(self.login_card, text="✨ AI NETWORK",
+                     font=ctk.CTkFont(size=28, weight="bold"),
+                     text_color=PRIMARY_BTN).grid(row=0, column=0, pady=(40, 5))
+        
+        ctk.CTkLabel(self.login_card, text="Next-Gen Realtime Chat",
+                     font=ctk.CTkFont(size=12),
+                     text_color=TEXT_MUTED).grid(row=1, column=0, pady=(0, 25))
+
+        # Input Group: Username
+        ctk.CTkLabel(self.login_card, text="USERNAME", 
+                     font=ctk.CTkFont(size=10, weight="bold"),
+                     text_color=TEXT_MUTED).grid(row=2, column=0, sticky="w", padx=50, pady=(10, 0))
+        self.username_entry = ctk.CTkEntry(self.login_card,
+                                           placeholder_text="e.g. CyberPunk", width=300, height=45,
+                                           fg_color=INPUT_BG, border_color=BORDER_COLOR,
+                                           font=ctk.CTkFont(size=14))
+        self.username_entry.grid(row=3, column=0, padx=50, pady=(5, 15))
+
+        # Input Group: Server IP
+        ctk.CTkLabel(self.login_card, text="SERVER ADDRESS", 
+                     font=ctk.CTkFont(size=10, weight="bold"),
+                     text_color=TEXT_MUTED).grid(row=4, column=0, sticky="w", padx=50, pady=(10, 0))
+        self.host_entry = ctk.CTkEntry(self.login_card,
+                                       placeholder_text="127.0.0.1", width=300, height=45,
+                                       fg_color=INPUT_BG, border_color=BORDER_COLOR,
+                                       font=ctk.CTkFont(size=14))
+        self.host_entry.insert(0, "127.0.0.1")
+        self.host_entry.grid(row=5, column=0, padx=50, pady=(5, 30))
+
+        # Connect Button
+        self.connect_btn = ctk.CTkButton(self.login_card, text="JOIN CHATROOM 🚀",
+                                          command=self.connect_to_server, width=300, height=50,
+                                          fg_color=PRIMARY_BTN, hover_color=PRIMARY_BTN_HOVER,
+                                          font=ctk.CTkFont(size=15, weight="bold"),
+                                          corner_radius=15, text_color="white")
+        self.connect_btn.grid(row=6, column=0, padx=50, pady=0)
+
+        # Error State
+        self.error_label = ctk.CTkLabel(self.login_card, text="", text_color="#FF5555",
+                                        font=ctk.CTkFont(size=12))
+        self.error_label.grid(row=7, column=0, padx=20, pady=15)
+        
+        self.bind('<Return>', lambda e: self.connect_to_server())
+        self.username_entry.focus()

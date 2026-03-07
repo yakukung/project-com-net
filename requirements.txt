@@ -1,0 +1,4 @@
+customtkinter
+groq
+google-generativeai
+python-dotenv
