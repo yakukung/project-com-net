@@ -27,8 +27,8 @@
    ```
 
 4. **ตั้งค่า Environment Variables**
-   - สร้างไฟล์ชื่อ `.env` ที่โฟลเดอร์หลัก (Root) ของโปรเจกต์
-   - คัดลอกเนื้อหาจากไฟล์ `exam.env` ไปใส่ใน `.env` และเติม API Key ให้ถูกต้อง:
+   - เปลี่ยนชื่อไฟล์จาก `exam.env` เป็น `.env`
+   - เปิดไฟล์ `.env` และเอา API Key มาใส่ให้ถูกต้อง:
      ```env
      GEMINI_API_KEY=ใส่_GEMINI_API_KEY_ที่นี่
      GROQ_API_KEY=ใส่_GROQ_API_KEY_ที่นี่
