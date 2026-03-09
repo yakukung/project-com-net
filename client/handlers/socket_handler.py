@@ -39,14 +39,14 @@ class SocketHandlerMixin:
 
         self._reset_runtime_state()
         self.show_login_frame()
-        self.error_label.configure(text=error_msg)
+        self._show_error_popup("การเชื่อมต่อล้มเหลว", "การเชื่อมต่อถูกตัดขาด", error_msg)
 
     def connect_to_server(self) -> None:
         username = self.username_entry.get().strip()
         host = self.host_entry.get().strip() or DEFAULT_CLIENT_HOST
 
         if not username:
-            self.error_label.configure(text="Username cannot be empty")
+            self._show_error_popup("ข้อผิดพลาด", "ชื่อผู้ใช้ว่างเปล่า", "กรุณาระบุชื่อผู้ใช้ของคุณ")
             return
 
         invalid_reason = validate_username(username)
@@ -58,7 +58,7 @@ class SocketHandlerMixin:
                 "reserved": "ชื่อผู้ใช้นี้ไม่สามารถใช้งานได้ (คำสงวน)"
             }
             msg = error_map.get(invalid_reason, "ชื่อผู้ใช้ไม่ถูกต้อง")
-            self.error_label.configure(text=msg)
+            self._show_error_popup("ชื่อผู้ใช้ไม่ถูกต้อง", msg)
             return
 
         self.username = username
@@ -74,11 +74,11 @@ class SocketHandlerMixin:
             self.send_raw(build_join_message(self.username))
         except Exception as exc:
             self._close_client_socket()
-            self._show_connection_error(host, str(exc))
+            self._show_error_popup("ไม่สามารถเชื่อมต่อได้", f"ไม่สามารถเชื่อมต่อ  {host}  ได้", str(exc))
 
-    def _show_connection_error(self, host: str, reason: str) -> None:
+    def _show_error_popup(self, title: str, message: str, subtext: str = None) -> None:
         popup = ctk.CTkToplevel(self)
-        popup.title("ไม่สามารถเชื่อมต่อได้")
+        popup.title(title)
         popup.geometry("380x220")
         popup.resizable(False, False)
         popup.grab_set()
@@ -91,25 +91,29 @@ class SocketHandlerMixin:
 
         ctk.CTkLabel(
             popup,
-            text="⚠️  ไม่พบ Server",
-            font=ctk.CTkFont(size=20, weight="bold"),
+            text="⚠️",
+            font=ctk.CTkFont(size=40),
             text_color="#FF5370",
-        ).pack(pady=(28, 6))
+        ).pack(pady=(25, 5))
 
         ctk.CTkLabel(
             popup,
-            text=f"ไม่สามารถเชื่อมต่อ  {host}  ได้",
-            font=ctk.CTkFont(size=13),
-            text_color="#A0A8CC",
-        ).pack(pady=(0, 4))
-
-        ctk.CTkLabel(
-            popup,
-            text=reason,
-            font=ctk.CTkFont(size=11),
-            text_color="#6B728E",
+            text=message,
+            font=ctk.CTkFont(size=17, weight="bold"),
+            text_color="#FF5370",
             wraplength=320,
-        ).pack(pady=(0, 18))
+            justify="center",
+        ).pack(pady=(0, 6))
+
+        if subtext:
+            ctk.CTkLabel(
+                popup,
+                text=subtext,
+                font=ctk.CTkFont(size=13),
+                text_color="#A0A8CC",
+                wraplength=320,
+                justify="center",
+            ).pack(pady=(0, 4))
 
         ctk.CTkButton(
             popup,
@@ -121,7 +125,7 @@ class SocketHandlerMixin:
             corner_radius=18,
             font=ctk.CTkFont(size=13, weight="bold"),
             command=popup.destroy,
-        ).pack()
+        ).pack(pady=(18, 0))
 
     def send_raw(self, message: str) -> None:
         if not self.client_socket:

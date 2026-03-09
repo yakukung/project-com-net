@@ -32,6 +32,7 @@ class MessageKind(str, Enum):
 
     # Fallback
     UNKNOWN = "unknown"
+    ERROR = "error"
 
 @dataclass(frozen=True)
 class ParsedMessage:

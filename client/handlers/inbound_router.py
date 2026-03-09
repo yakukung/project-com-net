@@ -85,6 +85,14 @@ def dispatch_server_message(app, message: str) -> str:
         app.after(0, on_group_created)
         return "handled"
 
+    if parsed.kind == MessageKind.ERROR:
+        reason = parsed.data.get("reason", "เกิดข้อผิดพลาดขึ้น")
+        def show_error(r=reason):
+            if hasattr(app, "_show_error_popup"):
+                app._show_error_popup("ข้อผิดพลาดจาก Server", r)
+        app.after(0, show_error)
+        return "handled"
+
     if parsed.kind == MessageKind.GROUP_MEMBERS:
         group_id = parsed.data["group_id"]
         members = parsed.data["members"]

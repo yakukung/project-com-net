@@ -37,6 +37,12 @@ python run_server.py
 
 _Server จะเริ่มทำงานที่ Port 5000 (ค่าเริ่มต้น)_
 
+หากต้องการรันหลายตัวพร้อมกัน หรือระบุ Port เอง:
+
+```bash
+python run_server.py --port 5001
+```
+
 ### 2. รันฝั่ง Client
 
 เปิดอีก Terminal หนึ่งแล้วรันคำสั่ง:

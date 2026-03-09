@@ -81,6 +81,10 @@ def build_system_message(text: str) -> str:
     return f"[System]: {text}"
 
 
+def build_error_message(reason: str) -> str:
+    return f"[System|ERROR]: {reason}"
+
+
 def build_username_taken_error_message() -> str:
     return USERNAME_TAKEN_ERROR
 
@@ -241,6 +245,7 @@ _SERVER_GROUP_MEMBERS_PATTERN = re.compile(r"^\[System\|GROUP_MEMBERS:(.+?):(.*?
 _SERVER_GROUP_OWNERSHIP_PATTERN = re.compile(r"^\[System\|GROUP_OWNERSHIP_CHANGED:(.+?):(.+?)\]$")
 _SERVER_GROUP_KICKED_PATTERN = re.compile(r"^\[System\|GROUP_KICKED:(.+?)\]: (.*)$")
 _SERVER_GROUP_DELETED_PATTERN = re.compile(r"^\[System\|GROUP_DELETED:(.+?)\]$")
+_SERVER_GENERIC_ERROR_PATTERN = re.compile(r"^\[System\|ERROR\]: (.*)$")
 _SERVER_GROUP_CHAT_PATTERN = re.compile(
     r"^\[GROUP\|MSG:(.+?)\|FROM:(.+?)(?:\|REPLY:(.+?))?\]: (.+)$",
     re.DOTALL,
@@ -250,6 +255,10 @@ _SERVER_GROUP_CHAT_PATTERN = re.compile(
 def parse_server_message(message: str) -> ParsedMessage:
     if message == USERNAME_TAKEN_ERROR:
         return ParsedMessage(MessageKind.USERNAME_TAKEN_ERROR, {})
+
+    match = _SERVER_GENERIC_ERROR_PATTERN.match(message)
+    if match:
+        return ParsedMessage(MessageKind.ERROR, {"reason": match.group(1)})
 
     match = _SERVER_USER_LIST_PATTERN.match(message)
     if match:

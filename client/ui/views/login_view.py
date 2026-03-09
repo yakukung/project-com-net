@@ -92,15 +92,7 @@ class LoginViewMixin:
             corner_radius=15,
             text_color="white",
         )
-        self.connect_btn.grid(row=6, column=0, padx=50, pady=0)
-
-        self.error_label = ctk.CTkLabel(
-            self.login_card,
-            text="",
-            text_color="#FF5555",
-            font=ctk.CTkFont(size=12),
-        )
-        self.error_label.grid(row=7, column=0, padx=20, pady=15)
+        self.connect_btn.grid(row=6, column=0, padx=50, pady=(0, 40))
 
         self.bind("<Return>", lambda _event: self.connect_to_server())
         self.username_entry.focus()

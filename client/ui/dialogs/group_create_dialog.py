@@ -116,9 +116,23 @@ class GroupCreateDialog(ctk.CTkToplevel):
         ).pack(side="left", padx=8)
 
     def _confirm(self) -> None:
+        from shared.validation import validate_group_name
+
         group_name = self.name_entry.get().strip()
-        if not group_name:
+        invalid_reason = validate_group_name(group_name)
+
+        if invalid_reason:
             self.name_entry.configure(border_color="#FF5370")
+            error_map = {
+                "empty": "กรุณาระบุชื่อช่องแชท",
+                "too_long": f"ชื่อช่องแชทยาวเกินไป (สูงสุด 48 ตัวอักษร)",
+                "invalid_chars": "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต",
+                "reserved": "ชื่อช่องแชทนี้ไม่สามารถใช้งานได้ (คำสงวน)"
+            }
+            msg = error_map.get(invalid_reason, "ชื่อช่องแชทไม่ถูกต้อง")
+            # self.master is the ChatApplication instance which has _show_error_popup
+            if hasattr(self.master, "_show_error_popup"):
+                self.master._show_error_popup("ข้อมูลไม่ถูกต้อง", msg)
             return
 
         members = [username for username, selected in self.selected.items() if selected.get()]
