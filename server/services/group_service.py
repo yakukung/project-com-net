@@ -29,9 +29,9 @@ def create_group_for_owner(
         elif invalid_reason == "too_long":
             message = "ชื่อช่องแชทยาวเกินไป (สูงสุด 48 ตัวอักษร)"
         elif invalid_reason == "reserved":
-            message = "ชื่อช่องแชทนี้เป็นชื่อที่สงวนไว้"
-        else:
-            message = "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต"
+            message = "ชื่อช่องแชทนี้เป็นชื่อที่สงวนไว้ (เช่น system, ai, admin, server, everyone)"
+        elif invalid_reason == "invalid_chars":
+            message = "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต (ห้ามใช้ [ ] : | , และอักขระควบคุม)"
         repository.send_message(client_socket, build_system_message(message))
         return
 

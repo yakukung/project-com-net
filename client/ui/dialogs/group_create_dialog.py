@@ -126,8 +126,8 @@ class GroupCreateDialog(ctk.CTkToplevel):
             error_map = {
                 "empty": "กรุณาระบุชื่อช่องแชท",
                 "too_long": f"ชื่อช่องแชทยาวเกินไป (สูงสุด 48 ตัวอักษร)",
-                "invalid_chars": "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต",
-                "reserved": "ชื่อช่องแชทนี้ไม่สามารถใช้งานได้ (คำสงวน)"
+                "invalid_chars": "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต (ห้ามใช้ [ ] : | , และอักขระควบคุม)",
+                "reserved": "ชื่อช่องแชทนี้ไม่สามารถใช้งานได้ (เช่น system, ai, admin, server, everyone)"
             }
             msg = error_map.get(invalid_reason, "ชื่อช่องแชทไม่ถูกต้อง")
             # self.master is the ChatApplication instance which has _show_error_popup

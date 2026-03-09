@@ -54,8 +54,8 @@ class SocketHandlerMixin:
             error_map = {
                 "empty": "ชื่อผู้ใช้ต้องไม่ว่าง",
                 "too_long": "ชื่อผู้ใช้ยาวเกินไป (สูงสุด 24 ตัวอักษร)",
-                "invalid_chars": "ชื่อผู้ใช้มีอักขระที่ไม่อนุญาต หรือมีช่องว่าง",
-                "reserved": "ชื่อผู้ใช้นี้ไม่สามารถใช้งานได้ (คำสงวน)"
+                "invalid_chars": "ชื่อผู้ใช้มีอักขระที่ไม่อนุญาต (ห้ามใช้ [ ] : | , @ และอักขระควบคุม)",
+                "reserved": "ชื่อผู้ใช้นี้ไม่สามารถใช้งานได้ (เช่น system, ai, admin, server, everyone)"
             }
             msg = error_map.get(invalid_reason, "ชื่อผู้ใช้ไม่ถูกต้อง")
             self._show_error_popup("ชื่อผู้ใช้ไม่ถูกต้อง", msg)

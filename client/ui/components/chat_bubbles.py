@@ -1,4 +1,5 @@
 import re
+from datetime import datetime
 from typing import Optional
 
 import customtkinter as ctk
@@ -140,10 +141,34 @@ class ChatBubblesComponentMixin:
         container = ctk.CTkFrame(scroll, fg_color="transparent")
         container.grid(row=panel["chat_row"], column=0, sticky="ew", pady=4, padx=6)
         panel["chat_row"] += 1
-        container.grid_columnconfigure(0, weight=1)
+        
+        # Grid layout for bubble and timestamp
+        container.grid_columnconfigure(0, weight=1 if is_me else 0)
+        container.grid_columnconfigure(1, weight=0 if is_me else 1)
 
         bubble = ctk.CTkFrame(container, fg_color=bubble_color, corner_radius=15, **border_kwargs)
-        bubble.grid(row=0, column=0, sticky=align)
+        
+        if not is_system:
+            time_str = datetime.now().strftime("%H:%M")
+            time_label = ctk.CTkLabel(
+                container,
+                text=time_str,
+                font=ctk.CTkFont(size=10),
+                text_color=TEXT_MUTED,
+            )
+            
+            if is_me:
+                bubble.grid(row=0, column=1, sticky="e")
+                time_label.grid(row=0, column=0, sticky="se", padx=(0, 8), pady=(0, 5))
+            else:
+                bubble.grid(row=0, column=0, sticky="w")
+                time_label.grid(row=0, column=1, sticky="sw", padx=(8, 0), pady=(0, 5))
+        else:
+            bubble.grid(row=0, column=0, columnspan=2)
+            if sender == "System": # Center system messages
+                 bubble.grid_configure(sticky="")
+            else:
+                 bubble.grid_configure(sticky=align)
 
         if tag:
             ctk.CTkLabel(

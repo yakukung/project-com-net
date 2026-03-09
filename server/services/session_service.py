@@ -11,8 +11,10 @@ def _build_invalid_username_message(reason: str) -> str:
     if reason == "too_long":
         return "ชื่อผู้ใช้ยาวเกินไป (สูงสุด 24 ตัวอักษร)"
     if reason == "reserved":
-        return "ชื่อผู้ใช้นี้ไม่สามารถใช้งานได้"
-    return "ชื่อผู้ใช้มีอักขระที่ไม่อนุญาต"
+        return "ชื่อผู้ใช้นี้ไม่สามารถใช้งานได้ (เช่น system, ai, admin, server, everyone)"
+    elif reason == "invalid_chars":
+        return "ชื่อผู้ใช้มีอักขระที่ไม่อนุญาต (ห้ามใช้ [ ] : | , และอักขระควบคุม)"
+    return "ชื่อผู้ใช้ไม่ถูกต้อง"
 
 
 def join_client(client_socket, requested_username: str, repository: ChatRepository) -> Optional[str]:
