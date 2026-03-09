@@ -16,7 +16,6 @@ def _build_invalid_username_message(reason: str) -> str:
 
 
 def join_client(client_socket, requested_username: str, repository: ChatRepository) -> Optional[str]:
-    """Register a new client and broadcast presence. Returns username or None."""
     username = requested_username.strip()
     invalid_reason = validate_username(username)
     if invalid_reason:

@@ -9,4 +9,8 @@ env/
 
 # Environment Variables
 .env
-__pycache__
+
+# PyInstaller / Build
+build/
+dist/
+*.spec

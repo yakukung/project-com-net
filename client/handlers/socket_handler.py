@@ -11,6 +11,7 @@ from client.services.group_service import (
 from client.services.message_service import build_outbound_message
 from client.state.chat_state import reset_runtime_state
 from shared.network_constants import DEFAULT_CLIENT_HOST
+from shared.validation import validate_username
 from shared.messages import build_join_message
 from shared.protocol import recv_msg, send_msg as protocol_send_msg
 
@@ -46,6 +47,18 @@ class SocketHandlerMixin:
 
         if not username:
             self.error_label.configure(text="Username cannot be empty")
+            return
+
+        invalid_reason = validate_username(username)
+        if invalid_reason:
+            error_map = {
+                "empty": "ชื่อผู้ใช้ต้องไม่ว่าง",
+                "too_long": "ชื่อผู้ใช้ยาวเกินไป (สูงสุด 24 ตัวอักษร)",
+                "invalid_chars": "ชื่อผู้ใช้มีอักขระที่ไม่อนุญาต หรือมีช่องว่าง",
+                "reserved": "ชื่อผู้ใช้นี้ไม่สามารถใช้งานได้ (คำสงวน)"
+            }
+            msg = error_map.get(invalid_reason, "ชื่อผู้ใช้ไม่ถูกต้อง")
+            self.error_label.configure(text=msg)
             return
 
         self.username = username
