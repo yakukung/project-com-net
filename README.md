@@ -4,7 +4,7 @@
 
 ## 🚀 การติดตั้ง (Installation)
 
-1. **สร้าง Virtual Environment (แนะนำ)**
+1. **สร้าง Virtual Environment**
 
    ```bash
    python -m venv venv
@@ -21,9 +21,21 @@
      ```
 
 3. **ติดตั้ง Library ที่จำเป็น**
+
    ```bash
    pip install -r requirements.txt
    ```
+
+4. **ตั้งค่า Environment Variables**
+   - สร้างไฟล์ชื่อ `.env` ที่โฟลเดอร์หลัก (Root) ของโปรเจกต์
+   - คัดลอกเนื้อหาจากไฟล์ `exam.env` ไปใส่ใน `.env` และเติม API Key ให้ถูกต้อง:
+     ```env
+     GEMINI_API_KEY=ใส่_GEMINI_API_KEY_ที่นี่
+     GROQ_API_KEY=ใส่_GROQ_API_KEY_ที่นี่
+     ```
+   - **แหล่งข้อมูล:**
+     - Gemini API Key: [Google AI Studio](https://aistudio.google.com/)
+     - Groq API Key: [Groq Console](https://console.groq.com/keys)
 
 ## 🛠️ วิธีการใช้งาน (Usage)
 
