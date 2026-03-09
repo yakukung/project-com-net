@@ -10,6 +10,11 @@
    python -m venv venv
    ```
 
+   - **หรือ**
+     ```bash
+     python3 -m venv venv
+     ```
+
 2. **Activate Virtual Environment**
    - **Mac/Linux:**
      ```bash
