@@ -1,6 +1,7 @@
 from shared.messages import (
     build_group_add_members_message,
     build_group_create_message,
+    build_group_delete_message,
     build_group_kick_message,
     build_group_leave_message,
     build_group_members_request_message,
@@ -30,3 +31,7 @@ def build_group_leave_payload(group_id: str) -> str:
 
 def build_group_members_request_payload(group_id: str) -> str:
     return build_group_members_request_message(group_id)
+
+
+def build_group_delete_payload(group_id: str) -> str:
+    return build_group_delete_message(group_id)

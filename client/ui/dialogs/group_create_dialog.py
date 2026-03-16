@@ -1,4 +1,8 @@
 import customtkinter as ctk
+
+from client.ui.popup_utils import bring_popup_to_front
+
+
 class GroupCreateDialog(ctk.CTkToplevel):
     def __init__(self, parent, online_users: list[str], on_confirm) -> None:
         super().__init__(parent)
@@ -15,6 +19,7 @@ class GroupCreateDialog(ctk.CTkToplevel):
         pos_x = parent.winfo_x() + (parent.winfo_width() // 2) - 180
         pos_y = parent.winfo_y() + (parent.winfo_height() // 2) - 220
         self.geometry(f"+{pos_x}+{pos_y}")
+        bring_popup_to_front(self, parent, keep_on_top=True)
 
         ctk.CTkLabel(
             self,
@@ -127,7 +132,7 @@ class GroupCreateDialog(ctk.CTkToplevel):
                 "empty": "กรุณาระบุชื่อช่องแชท",
                 "too_long": f"ชื่อช่องแชทยาวเกินไป (สูงสุด 48 ตัวอักษร)",
                 "invalid_chars": "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต (ห้ามใช้ [ ] : | , และอักขระควบคุม)",
-                "reserved": "ชื่อช่องแชทนี้ไม่สามารถใช้งานได้ (เช่น system, ai, admin, server, everyone)"
+                "reserved": "ชื่อช่องแชทนี้ไม่สามารถใช้งานได้ (เช่น system, ai, admin, server, everyone, แชทรวม)"
             }
             msg = error_map.get(invalid_reason, "ชื่อช่องแชทไม่ถูกต้อง")
             # self.master is the ChatApplication instance which has _show_error_popup
@@ -157,6 +162,7 @@ class GroupMemberAddDialog(ctk.CTkToplevel):
         pos_x = parent.winfo_x() + (parent.winfo_width() // 2) - 170
         pos_y = parent.winfo_y() + (parent.winfo_height() // 2) - 200
         self.geometry(f"+{pos_x}+{pos_y}")
+        bring_popup_to_front(self, parent, keep_on_top=True)
 
         ctk.CTkLabel(
             self,

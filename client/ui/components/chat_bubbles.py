@@ -39,6 +39,12 @@ class ChatBubblesComponentMixin:
                 sender, reply_quote = sender.split("|REPLY:", 1)
                 reply_quote = reply_quote.strip()
 
+        blocked_usernames = getattr(self, "blocked_usernames", set())
+        if sender not in {"System"} and sender != self.username:
+            sender_key = sender.strip().lower()
+            if any(sender_key == blocked_name.lower() for blocked_name in blocked_usernames):
+                return
+
         is_me = sender == self.username
         is_system = sender == "System"
         is_ai = "AI" in sender
@@ -141,6 +147,8 @@ class ChatBubblesComponentMixin:
         container = ctk.CTkFrame(scroll, fg_color="transparent")
         container.grid(row=panel["chat_row"], column=0, sticky="ew", pady=4, padx=6)
         panel["chat_row"] += 1
+        container._chat_sender = sender  # type: ignore[attr-defined]
+        container._chat_sender_key = sender.strip().lower() if sender else ""  # type: ignore[attr-defined]
         
         # Grid layout for bubble and timestamp
         container.grid_columnconfigure(0, weight=1 if is_me else 0)

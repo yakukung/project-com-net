@@ -1,7 +1,7 @@
 from shared.models import MessageKind, ParsedMessage
 from shared.messages import build_system_message
 from server.repositories.chat_repository import ChatRepository
-from server.services import direct_message_service, group_service, session_service
+from server.services import block_service, direct_message_service, group_service, session_service
 
 
 class MessageRouter:
@@ -28,6 +28,14 @@ class MessageRouter:
                 )
 
             direct_message_service.send_public_message(client_socket, raw_message, self.repository)
+            return username
+
+        if parsed.kind == MessageKind.BLOCK_USER:
+            block_service.block_user_by_ip(client_socket, parsed.data["target_username"], self.repository)
+            return username
+
+        if parsed.kind == MessageKind.UNBLOCK_USER:
+            block_service.unblock_user_by_ip(client_socket, parsed.data["target_username"], self.repository)
             return username
 
         if parsed.kind == MessageKind.GROUP_CREATE:

@@ -1,4 +1,10 @@
+from tkinter import messagebox
+
 import customtkinter as ctk
+
+from client.ui.popup_utils import bring_popup_to_front
+
+
 class GroupMembersDialog(ctk.CTkToplevel):
     def __init__(
         self,
@@ -11,6 +17,7 @@ class GroupMembersDialog(ctk.CTkToplevel):
         on_kick,
         on_transfer,
         on_add,
+        on_delete,
     ) -> None:
         super().__init__(parent)
         self.group_id = group_id
@@ -18,18 +25,20 @@ class GroupMembersDialog(ctk.CTkToplevel):
         self.on_kick = on_kick
         self.on_transfer = on_transfer
         self.on_add = on_add
+        self.on_delete = on_delete
         self.is_owner = my_username == owner_name
 
         self.title(f"สมาชิก - {group_name}")
-        self.geometry("320x420")
+        self.geometry("360x500")
         self.resizable(False, False)
         self.grab_set()
         self.configure(fg_color="#1A1D2E")
 
         self.update_idletasks()
-        pos_x = parent.winfo_x() + (parent.winfo_width() // 2) - 160
-        pos_y = parent.winfo_y() + (parent.winfo_height() // 2) - 210
+        pos_x = parent.winfo_x() + (parent.winfo_width() // 2) - 180
+        pos_y = parent.winfo_y() + (parent.winfo_height() // 2) - 250
         self.geometry(f"+{pos_x}+{pos_y}")
+        bring_popup_to_front(self, parent, keep_on_top=True)
 
         ctk.CTkLabel(
             self,
@@ -50,7 +59,7 @@ class GroupMembersDialog(ctk.CTkToplevel):
             fg_color="#0F1120",
             corner_radius=10,
             height=230,
-            width=280,
+            width=320,
         )
         scroll.pack(padx=20, pady=(0, 16))
         scroll.grid_columnconfigure(0, weight=1)
@@ -83,12 +92,12 @@ class GroupMembersDialog(ctk.CTkToplevel):
                     command=lambda name=username: self._kick(name),
                 ).grid(row=0, column=1, padx=(8, 0))
 
-        button_frame = ctk.CTkFrame(self, fg_color="transparent")
-        button_frame.pack(pady=(0, 16))
-
         if self.is_owner:
+            owner_actions = ctk.CTkFrame(self, fg_color="transparent")
+            owner_actions.pack(pady=(0, 10))
+
             ctk.CTkButton(
-                button_frame,
+                owner_actions,
                 text="เพิ่มสมาชิก",
                 width=120,
                 height=36,
@@ -101,7 +110,7 @@ class GroupMembersDialog(ctk.CTkToplevel):
             ).pack(side="left", padx=6)
 
             ctk.CTkButton(
-                button_frame,
+                owner_actions,
                 text="เปลี่ยนเจ้าของช่องแชท",
                 width=130,
                 height=36,
@@ -112,7 +121,22 @@ class GroupMembersDialog(ctk.CTkToplevel):
                 font=ctk.CTkFont(size=13, weight="bold"),
                 command=self._transfer,
             ).pack(side="left", padx=6)
+
+            ctk.CTkButton(
+                self,
+                text="ลบช่องแชท",
+                width=262,
+                height=36,
+                fg_color="#B71C1C",
+                hover_color="#7F0000",
+                text_color="white",
+                corner_radius=18,
+                font=ctk.CTkFont(size=13, weight="bold"),
+                command=self._delete_group,
+            ).pack(pady=(0, 16))
         else:
+            button_frame = ctk.CTkFrame(self, fg_color="transparent")
+            button_frame.pack(pady=(0, 16))
             ctk.CTkButton(
                 button_frame,
                 text="ปิด",
@@ -135,3 +159,9 @@ class GroupMembersDialog(ctk.CTkToplevel):
     def _add(self) -> None:
         self.destroy()
         self.on_add(self.group_id, self.members)
+
+    def _delete_group(self) -> None:
+        if not messagebox.askyesno("ยืนยัน", "คุณต้องการลบช่องแชทย่อยนี้หรือไม่?", parent=self):
+            return
+        self.destroy()
+        self.on_delete(self.group_id)

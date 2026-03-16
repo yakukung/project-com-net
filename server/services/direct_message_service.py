@@ -24,8 +24,15 @@ def send_direct_message(
         repository.send_message(client_socket, build_system_message(f"ไม่พบผู้ใช้ '{target_name}' ออนไลน์"))
         return
 
-    repository.send_message(target_sock, build_dm_from_message(sender_name, dm_text))
+    delivered = repository.send_message_from(
+        client_socket,
+        target_sock,
+        build_dm_from_message(sender_name, dm_text),
+    )
     repository.send_message(client_socket, build_dm_to_message(target_name, dm_text))
+    # Silent ignore mode: recipient can hide blocked sender without sender being notified.
+    if not delivered:
+        return
 
     if contains_ai_mention(dm_text):
         from server.handlers.ai_message_handler import query_ai_and_broadcast
@@ -44,15 +51,18 @@ def send_direct_message(
 def send_public_message(client_socket, message_text: str, repository: ChatRepository) -> None:
     sender_name = repository.get_username_by_socket(client_socket) or "Unknown"
     public_message = build_chat_message(sender_name, message_text)
-    repository.broadcast_message(public_message)
+    repository.broadcast_message(public_message, sender_sock=client_socket)
 
     if contains_ai_mention(message_text):
         from server.handlers.ai_message_handler import query_ai_and_broadcast
 
-        repository.broadcast_message(build_system_message("AI กำลังพิมพ์คำตอบ..."))
+        repository.broadcast_message(
+            build_system_message("AI กำลังพิมพ์คำตอบ..."),
+            sender_sock=client_socket,
+        )
         thread = threading.Thread(
             target=query_ai_and_broadcast,
-            args=(message_text, message_text, None, None, repository),
+            args=(message_text, message_text, client_socket, None, repository),
             daemon=True,
         )
         thread.start()

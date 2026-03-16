@@ -2,7 +2,6 @@ from shared.messages import (
     build_chat_message,
     build_dm_ai_message,
     build_dm_from_message,
-    build_dm_to_message,
     build_system_message,
     normalize_ai_prompt,
 )
@@ -48,7 +47,7 @@ def query_ai_and_broadcast(
         if target_sock:
             repository.send_message(target_sock, ai_message)
         else:
-            repository.broadcast_message(ai_message)
+            repository.broadcast_message(ai_message, sender_sock=sender_sock)
     except Exception as exc:
         print(f"--> [AI THREAD] Error: {exc}")
         error_text = f"AI Error -> ไม่สามารถตอบได้ ({str(exc)[:120]})"
@@ -70,4 +69,4 @@ def query_ai_and_broadcast(
         if target_sock:
             repository.send_message(target_sock, error_message)
         else:
-            repository.broadcast_message(error_message)
+            repository.broadcast_message(error_message, sender_sock=sender_sock)

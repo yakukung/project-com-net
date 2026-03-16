@@ -8,6 +8,7 @@ from shared.messages import (
     build_group_members_message,
     build_group_ownership_changed_message,
     build_system_message,
+    build_error_message,
     contains_ai_mention,
     normalize_ai_prompt,
 )
@@ -29,10 +30,18 @@ def create_group_for_owner(
         elif invalid_reason == "too_long":
             message = "ชื่อช่องแชทยาวเกินไป (สูงสุด 48 ตัวอักษร)"
         elif invalid_reason == "reserved":
-            message = "ชื่อช่องแชทนี้เป็นชื่อที่สงวนไว้ (เช่น system, ai, admin, server, everyone)"
+            message = "ชื่อช่องแชทนี้เป็นชื่อที่สงวนไว้ (เช่น system, ai, admin, server, everyone, แชทรวม)"
         elif invalid_reason == "invalid_chars":
             message = "ชื่อช่องแชทมีอักขระที่ไม่อนุญาต (ห้ามใช้ [ ] : | , และอักขระควบคุม)"
-        repository.send_message(client_socket, build_system_message(message))
+        repository.send_message(client_socket, build_error_message(message))
+        return
+
+    if repository.is_group_name_exists(cleaned_group_name):
+        print(f"Group creation blocked: '{cleaned_group_name}' already exists.")
+        repository.send_message(
+            client_socket,
+            build_error_message(f"ชื่อช่องแชท '{cleaned_group_name}' มีอยู่แล้ว โปรดใช้ชื่ออื่น"),
+        )
         return
 
     owner_name = repository.get_username_by_socket(client_socket) or "Unknown"
@@ -46,7 +55,7 @@ def create_group_for_owner(
     group_id = repository.create_group(cleaned_group_name, member_sockets, owner_sock=client_socket)
     notification = build_group_created_message(group_id, cleaned_group_name, owner_name)
     for sock in member_sockets:
-        repository.send_message(sock, notification)
+        repository.send_message_from(client_socket, sock, notification)
 
     print(f"Group created: '{cleaned_group_name}' ({group_id}) by {owner_name}")
 
@@ -57,7 +66,7 @@ def send_group_members(client_socket, group_id: str, repository: ChatRepository)
         repository.send_message(client_socket, build_system_message("ไม่สามารถดูสมาชิกช่องแชทนี้ได้"))
         return
 
-    member_names = repository.get_group_member_names(group_id)
+    member_names = repository.get_group_member_names(group_id, viewer_sock=client_socket)
     owner_name = ""
     if group.get("owner"):
         owner_name = repository.get_username_by_socket(group["owner"]) or ""
@@ -88,6 +97,7 @@ def kick_member_from_group(
                 "System",
                 f"❌ {target_username} ถูกเตะออกจากช่องแชทโดย {requester_name}",
             ),
+            sender_sock=client_socket,
         )
         repository.send_message(kicked_sock, build_group_kicked_message(group_id, "kicked"))
 
@@ -135,8 +145,13 @@ def transfer_group_owner(
                 "System",
                 f"👑 {previous_owner} ได้โอนสิทธิ์ให้ {new_owner_name}",
             ),
+            sender_sock=client_socket,
         )
-        repository.send_to_group(group_id, build_group_ownership_changed_message(group_id, new_owner_name))
+        repository.send_to_group(
+            group_id,
+            build_group_ownership_changed_message(group_id, new_owner_name),
+            sender_sock=client_socket,
+        )
 
 
 def add_members_to_existing_group(
@@ -171,7 +186,7 @@ def add_members_to_existing_group(
     owner_name = repository.get_username_by_socket(client_socket) or "Owner"
     notify_new_members = build_group_created_message(group_id, group_name, owner_name)
     for sock in new_member_sockets:
-        repository.send_message(sock, notify_new_members)
+        repository.send_message_from(client_socket, sock, notify_new_members)
 
     added_list = ", ".join(added_names)
     repository.send_to_group(
@@ -181,6 +196,7 @@ def add_members_to_existing_group(
             "System",
             f"➕ {added_list} ถูกเพิ่มเข้าช่องแชทโดย {owner_name}",
         ),
+        sender_sock=client_socket,
     )
 
 
@@ -203,22 +219,23 @@ def send_group_message(
 
     sender_name = repository.get_username_by_socket(client_socket) or "Unknown"
     outbound = build_group_chat_message(group_id, sender_name, message_text)
-    repository.send_to_group(group_id, outbound)
+    repository.send_to_group(group_id, outbound, sender_sock=client_socket)
 
     if contains_ai_mention(message_text):
         repository.send_to_group(
             group_id,
             build_group_chat_message(group_id, "System", "AI กำลังพิมพ์คำตอบ..."),
+            sender_sock=client_socket,
         )
         thread = threading.Thread(
             target=_ai_group_reply,
-            args=(message_text, group_id, repository),
+            args=(message_text, group_id, repository, client_socket),
             daemon=True,
         )
         thread.start()
 
 
-def _ai_group_reply(prompt: str, group_id: str, repository: ChatRepository) -> None:
+def _ai_group_reply(prompt: str, group_id: str, repository: ChatRepository, origin_sock=None) -> None:
     """Fetch AI response and broadcast to a specific group."""
     from server.ai.ai_provider import get_ai_response
     from server.handlers.ai_message_handler import AI_SENDER_NAME
@@ -233,9 +250,10 @@ def _ai_group_reply(prompt: str, group_id: str, repository: ChatRepository) -> N
             ai_text,
             reply_quote=quoted_prompt,
         )
-        repository.send_to_group(group_id, response)
+        repository.send_to_group(group_id, response, sender_sock=origin_sock)
     except Exception as exc:
         repository.send_to_group(
             group_id,
             build_group_chat_message(group_id, "System", f"AI Error -> {str(exc)[:100]}"),
+            sender_sock=origin_sock,
         )

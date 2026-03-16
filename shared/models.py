@@ -5,6 +5,8 @@ from typing import Any
 class MessageKind(str, Enum):
     # Client -> Server
     JOIN = "join"
+    BLOCK_USER = "block_user"
+    UNBLOCK_USER = "unblock_user"
     GROUP_CREATE = "group_create"
     GROUP_MEMBERS_REQUEST = "group_members_request"
     GROUP_KICK = "group_kick"

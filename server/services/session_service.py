@@ -30,6 +30,9 @@ def join_client(client_socket, requested_username: str, repository: ChatReposito
         repository.send_message(client_socket, build_username_taken_error_message())
         return None
 
-    repository.broadcast_message(build_system_message(f"{username} เข้าร่วมช่องแชทแล้ว!"))
+    repository.broadcast_message(
+        build_system_message(f"{username} เข้าร่วมช่องแชทแล้ว!"),
+        sender_sock=client_socket,
+    )
     repository.broadcast_user_list()
     return username

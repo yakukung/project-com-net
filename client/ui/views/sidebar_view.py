@@ -1,5 +1,6 @@
 import customtkinter as ctk
 
+from client.services.block_service import build_unblock_user_payload
 from client.services.group_service import build_group_create_payload
 from client.ui.theme import BORDER_COLOR, SIDEBAR_BG, TEXT_MUTED
 
@@ -111,13 +112,29 @@ class SidebarViewMixin:
             sticky="ew",
             padx=8,
         )
+
+        self.blocked_users_button = ctk.CTkButton(
+            self.sidebar,
+            text="🚫 ที่บล็อค 0 คน",
+            fg_color="transparent",
+            hover_color="#2A2E44",
+            anchor="w",
+            font=ctk.CTkFont(size=12),
+            height=30,
+            command=self._open_blocked_users_dialog,
+        )
+        self.blocked_users_button.grid(row=5, column=0, padx=8, pady=(4, 0), sticky="ew")
+
         self.online_label = ctk.CTkLabel(
             self.sidebar,
             text="🟢 ออนไลน์ 0 คน",
             font=ctk.CTkFont(size=11),
             text_color=TEXT_MUTED,
         )
-        self.online_label.grid(row=5, column=0, padx=10, pady=(6, 12))
+        self.online_label.grid(row=6, column=0, padx=10, pady=(6, 12))
+
+        self.blocked_users_dialog = None
+        self._refresh_blocked_users_button()
 
     def _open_create_group_dialog(self) -> None:
         from client.ui.dialogs.group_create_dialog import GroupCreateDialog
@@ -147,8 +164,13 @@ class SidebarViewMixin:
         self.group_channel_buttons[group_id] = button
 
     def _update_user_list(self, users: list[str]) -> None:
-        self.online_users = [username for username in users if username != self.username]
-        self.online_label.configure(text=f"🟢 ออนไลน์ {len(users)} คน")
+        blocked_lower = {name.lower() for name in getattr(self, "blocked_usernames", set())}
+        self.online_users = [
+            username
+            for username in users
+            if username != self.username and username.lower() not in blocked_lower
+        ]
+        self.online_label.configure(text=f"🟢 ออนไลน์ {len(self.online_users) + 1} คน")
 
         offline_users = [username for username in self.dm_buttons if username not in self.online_users]
         for username in offline_users:
@@ -179,3 +201,47 @@ class SidebarViewMixin:
         unread_count = self.unread_dms.get(username, 0)
         label = f"● {username}" if unread_count == 0 else f"● {username}  ({unread_count})"
         self.dm_buttons[username].configure(text=label)
+
+    def _refresh_blocked_users_button(self) -> None:
+        blocked_count = len(getattr(self, "blocked_usernames", set()))
+        label = f"🚫 ที่บล็อค {blocked_count} คน"
+        self.blocked_users_button.configure(text=label)
+
+    def _open_blocked_users_dialog(self) -> None:
+        existing = getattr(self, "blocked_users_dialog", None)
+        if existing:
+            try:
+                if existing.winfo_exists():
+                    existing.focus_force()
+                    return
+            except Exception:
+                self.blocked_users_dialog = None
+
+        from client.ui.dialogs.blocked_users_dialog import BlockedUsersDialog
+
+        blocked_users = sorted(getattr(self, "blocked_usernames", set()), key=str.lower)
+        self.blocked_users_dialog = BlockedUsersDialog(
+            self,
+            blocked_users=blocked_users,
+            on_unblock=self._on_unblock_from_blocked_list,
+        )
+        self.blocked_users_dialog.bind("<Destroy>", self._on_blocked_dialog_destroy, add="+")
+
+    def _on_blocked_dialog_destroy(self, event) -> None:
+        if event.widget is getattr(self, "blocked_users_dialog", None):
+            self.blocked_users_dialog = None
+
+    def _on_unblock_from_blocked_list(self, username: str) -> None:
+        matched_name = next(
+            (name for name in self.blocked_usernames if name.lower() == username.lower()),
+            None,
+        )
+        if not matched_name:
+            return
+
+        self.blocked_usernames.discard(matched_name)
+        self.send_raw(build_unblock_user_payload(matched_name))
+        self._refresh_blocked_users_button()
+
+        if self.active_tab.lower() == matched_name.lower() and hasattr(self, "_refresh_block_button"):
+            self._refresh_block_button(matched_name)

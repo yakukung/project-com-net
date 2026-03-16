@@ -1,4 +1,8 @@
 import customtkinter as ctk
+
+from client.ui.popup_utils import bring_popup_to_front
+
+
 class GroupOwnerTransferDialog(ctk.CTkToplevel):
     def __init__(self, parent, members: list[str], my_username: str, on_confirm) -> None:
         super().__init__(parent)
@@ -16,6 +20,7 @@ class GroupOwnerTransferDialog(ctk.CTkToplevel):
         pos_x = parent.winfo_x() + (parent.winfo_width() // 2) - 170
         pos_y = parent.winfo_y() + (parent.winfo_height() // 2) - 220
         self.geometry(f"+{pos_x}+{pos_y}")
+        bring_popup_to_front(self, parent, keep_on_top=True)
 
         ctk.CTkLabel(
             self,

@@ -17,6 +17,9 @@ class ChatRepository:
 
     def __init__(self) -> None:
         self.clients: dict[object, str] = {}
+        self.client_ips: dict[object, str] = {}
+        self.blocked_ips_by_client: dict[object, set[str]] = {}
+        self.blocked_targets_by_client: dict[object, dict[str, str]] = {}
         self.clients_lock = threading.Lock()
         self.groups: dict[str, dict] = {}
         self.groups_lock = threading.Lock()
@@ -25,11 +28,89 @@ class ChatRepository:
         with self.clients_lock:
             return self.clients.get(sock)
 
-    def register_client(self, sock, requested_username: str) -> bool:
+    def _resolve_socket_ip(self, sock) -> Optional[str]:
+        try:
+            peer = sock.getpeername()
+            if isinstance(peer, tuple) and peer:
+                return str(peer[0])
+        except Exception:
+            return None
+        return None
+
+    def get_client_ip(self, sock) -> Optional[str]:
+        with self.clients_lock:
+            ip = self.client_ips.get(sock)
+        return ip or self._resolve_socket_ip(sock)
+
+    def register_client(self, sock, requested_username: str, client_ip: Optional[str] = None) -> bool:
+        resolved_ip = client_ip or self._resolve_socket_ip(sock)
         with self.clients_lock:
             if any(name.lower() == requested_username.lower() for name in self.clients.values()):
                 return False
             self.clients[sock] = requested_username
+            if resolved_ip:
+                self.client_ips[sock] = resolved_ip
+            self.blocked_ips_by_client.setdefault(sock, set())
+            self.blocked_targets_by_client.setdefault(sock, {})
+        return True
+
+    def is_sender_blocked_for_recipient(self, sender_sock, recipient_sock) -> bool:
+        if not sender_sock or sender_sock is recipient_sock:
+            return False
+
+        sender_ip = self.get_client_ip(sender_sock)
+        if not sender_ip:
+            return False
+
+        with self.clients_lock:
+            blocked_ips = self.blocked_ips_by_client.get(recipient_sock, set())
+            return sender_ip in blocked_ips
+
+    def block_user_ip(self, blocker_sock, target_username: str) -> str:
+        target_sock = self.get_socket_by_username(target_username)
+        if not target_sock:
+            return "target_not_found"
+        if target_sock is blocker_sock:
+            return "cannot_block_self"
+
+        target_ip = self.get_client_ip(target_sock)
+        if not target_ip:
+            return "target_ip_unknown"
+
+        with self.clients_lock:
+            blocked_ips = self.blocked_ips_by_client.setdefault(blocker_sock, set())
+            blocked_targets = self.blocked_targets_by_client.setdefault(blocker_sock, {})
+            blocked_targets[target_username.lower()] = target_ip
+            if target_ip in blocked_ips:
+                return "already_blocked"
+            blocked_ips.add(target_ip)
+        return "ok"
+
+    def unblock_user_ip(self, blocker_sock, target_username: str) -> str:
+        target_key = target_username.lower()
+        target_sock = self.get_socket_by_username(target_username)
+        if target_sock is blocker_sock:
+            return "cannot_unblock_self"
+
+        target_ip = self.get_client_ip(target_sock) if target_sock else None
+
+        with self.clients_lock:
+            blocked_ips = self.blocked_ips_by_client.setdefault(blocker_sock, set())
+            blocked_targets = self.blocked_targets_by_client.setdefault(blocker_sock, {})
+            if not target_ip:
+                target_ip = blocked_targets.get(target_key)
+            if target_ip not in blocked_ips:
+                return "not_blocked"
+            blocked_ips.remove(target_ip)
+            for blocked_name, blocked_ip in list(blocked_targets.items()):
+                if blocked_name == target_key or blocked_ip == target_ip:
+                    blocked_targets.pop(blocked_name, None)
+        return "ok"
+
+    def send_message_from(self, sender_sock, recipient_sock, message: str) -> bool:
+        if self.is_sender_blocked_for_recipient(sender_sock, recipient_sock):
+            return False
+        self.send_message(recipient_sock, message)
         return True
 
     def send_message(self, sock, message: str) -> None:
@@ -38,19 +119,32 @@ class ChatRepository:
         except Exception:
             self.remove_client(sock)
 
-    def broadcast_message(self, message: str, exclude=None) -> None:
+    def broadcast_message(self, message: str, exclude=None, sender_sock=None) -> None:
         with self.clients_lock:
             sockets = list(self.clients.keys())
 
         for sock in sockets:
             if sock is exclude:
                 continue
+            if self.is_sender_blocked_for_recipient(sender_sock, sock):
+                continue
             self.send_message(sock, message)
 
     def broadcast_user_list(self) -> None:
         with self.clients_lock:
-            names = list(self.clients.values())
-        self.broadcast_message(build_user_list_message(names))
+            client_items = list(self.clients.items())
+            ip_map = dict(self.client_ips)
+            blocked_map = {sock: set(ips) for sock, ips in self.blocked_ips_by_client.items()}
+
+        for recipient_sock, _ in client_items:
+            blocked_ips = blocked_map.get(recipient_sock, set())
+            visible_names: list[str] = []
+            for sender_sock, sender_name in client_items:
+                sender_ip = ip_map.get(sender_sock)
+                if sender_sock is not recipient_sock and sender_ip and sender_ip in blocked_ips:
+                    continue
+                visible_names.append(sender_name)
+            self.send_message(recipient_sock, build_user_list_message(visible_names))
 
     def get_socket_by_username(self, username: str):
         with self.clients_lock:
@@ -90,7 +184,8 @@ class ChatRepository:
                     owner_signal = build_group_ownership_changed_message(group_id, new_owner_name)
 
                     for sock in remaining_members:
-                        notifications.append((sock, leave_notice))
+                        if not self.is_sender_blocked_for_recipient(member_sock, sock):
+                            notifications.append((sock, leave_notice))
                         notifications.append((sock, owner_signal))
                 else:
                     self.groups.pop(group_id, None)
@@ -104,7 +199,8 @@ class ChatRepository:
                         f"🚪 {username} ได้ออกจากช่องแชท",
                     )
                     for sock in remaining_members:
-                        notifications.append((sock, leave_notice))
+                        if not self.is_sender_blocked_for_recipient(member_sock, sock):
+                            notifications.append((sock, leave_notice))
 
         for sock, message in notifications:
             self._send_internal(sock, message)
@@ -125,6 +221,9 @@ class ChatRepository:
     def remove_client(self, sock) -> None:
         with self.clients_lock:
             username = self.clients.pop(sock, None)
+            self.client_ips.pop(sock, None)
+            self.blocked_ips_by_client.pop(sock, None)
+            self.blocked_targets_by_client.pop(sock, None)
 
         try:
             sock.close()
@@ -140,7 +239,7 @@ class ChatRepository:
         for group_id in group_ids:
             self._remove_member_from_group(group_id, sock, username)
 
-        self.broadcast_message(build_system_message(f"{username} ออกจากช่องแชทแล้ว"))
+        self.broadcast_message(build_system_message(f"{username} ออกจากช่องแชทแล้ว"), sender_sock=sock)
         self.broadcast_user_list()
 
     def create_group(self, name: str, member_sockets: list, owner_sock=None) -> str:
@@ -174,7 +273,7 @@ class ChatRepository:
             group["members"].update(new_member_sockets)
             return group["name"]
 
-    def send_to_group(self, group_id: str, message: str, exclude=None) -> None:
+    def send_to_group(self, group_id: str, message: str, exclude=None, sender_sock=None) -> None:
         with self.groups_lock:
             group = self.groups.get(group_id)
             if not group:
@@ -184,13 +283,15 @@ class ChatRepository:
         for sock in sockets:
             if sock is exclude:
                 continue
+            if self.is_sender_blocked_for_recipient(sender_sock, sock):
+                continue
             self.send_message(sock, message)
 
     def get_group(self, group_id: str) -> Optional[dict]:
         with self.groups_lock:
             return self.groups.get(group_id)
 
-    def get_group_member_names(self, group_id: str) -> list[str]:
+    def get_group_member_names(self, group_id: str, viewer_sock=None) -> list[str]:
         with self.groups_lock:
             group = self.groups.get(group_id)
             if not group:
@@ -198,7 +299,18 @@ class ChatRepository:
             sockets = list(group["members"])
 
         with self.clients_lock:
-            return [self.clients[sock] for sock in sockets if sock in self.clients]
+            blocked_ips = set(self.blocked_ips_by_client.get(viewer_sock, set())) if viewer_sock else set()
+            result: list[str] = []
+            for sock in sockets:
+                username = self.clients.get(sock)
+                if not username:
+                    continue
+                if viewer_sock and sock is not viewer_sock:
+                    sender_ip = self.client_ips.get(sock)
+                    if sender_ip and sender_ip in blocked_ips:
+                        continue
+                result.append(username)
+            return result
 
     def kick_member(self, group_id: str, username: str):
         target_sock = self.get_socket_by_username(username)
@@ -231,6 +343,15 @@ class ChatRepository:
                 if sock in group["members"]:
                     result.append((group_id, group["name"]))
         return result
+
+    def is_group_name_exists(self, name: str) -> bool:
+        """Check if a group name already exists (case-insensitive)."""
+        target_name = name.lower().strip()
+        with self.groups_lock:
+            for group in self.groups.values():
+                if group["name"].lower().strip() == target_name:
+                    return True
+        return False
 
 
 _chat_repository = ChatRepository()

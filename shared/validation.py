@@ -14,6 +14,10 @@ RESERVED_USERNAMES = {
     "bot",
 }
 
+RESERVED_GROUP_NAMES = RESERVED_USERNAMES | {
+    "แชทรวม",
+}
+
 MAX_USERNAME_LENGTH = 24
 MAX_GROUP_NAME_LENGTH = 48
 
@@ -52,7 +56,7 @@ def validate_group_name(value: str) -> str | None:
     if any(ch in _GROUP_FORBIDDEN_CHARS for ch in group_name):
         return "invalid_chars"
 
-    if group_name.lower() in RESERVED_USERNAMES:
+    if group_name.lower() in RESERVED_GROUP_NAMES:
         return "reserved"
 
     return None

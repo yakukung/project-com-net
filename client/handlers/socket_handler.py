@@ -10,6 +10,7 @@ from client.services.group_service import (
 )
 from client.services.message_service import build_outbound_message
 from client.state.chat_state import reset_runtime_state
+from client.ui.popup_utils import bring_popup_to_front
 from shared.network_constants import DEFAULT_CLIENT_HOST
 from shared.validation import validate_username
 from shared.messages import build_join_message
@@ -33,6 +34,8 @@ class SocketHandlerMixin:
 
     def _handle_disconnect(self, error_msg: str) -> None:
         self._close_client_socket()
+        if hasattr(self, "_cleanup_emoji_runtime"):
+            self._cleanup_emoji_runtime()
 
         if hasattr(self, "main_container") and self.main_container.winfo_exists():
             self.main_container.destroy()
@@ -88,6 +91,7 @@ class SocketHandlerMixin:
         pos_x = self.winfo_x() + (self.winfo_width() // 2) - 190
         pos_y = self.winfo_y() + (self.winfo_height() // 2) - 110
         popup.geometry(f"+{pos_x}+{pos_y}")
+        bring_popup_to_front(popup, self, keep_on_top=True)
 
         ctk.CTkLabel(
             popup,

@@ -75,6 +75,14 @@ def build_group_leave_message(group_id: str) -> str:
     return f"[GROUP|LEAVE:{group_id}]"
 
 
+def build_block_user_message(target_username: str) -> str:
+    return f"[BLOCK|USER:{target_username}]"
+
+
+def build_unblock_user_message(target_username: str) -> str:
+    return f"[BLOCK|REMOVE:{target_username}]"
+
+
 # ----- Builders: server -> client -----
 
 def build_system_message(text: str) -> str:
@@ -155,6 +163,8 @@ _CLIENT_GROUP_DELETE_PATTERN = re.compile(r"^\[GROUP\|DELETE:([a-zA-Z0-9\-]{2,36
 _CLIENT_GROUP_TRANSFER_PATTERN = re.compile(r"^\[GROUP\|TRANSFER_OWNER:([a-zA-Z0-9\-]{2,36}):([^\]:\|]+)\]$")
 _CLIENT_GROUP_ADD_PATTERN = re.compile(r"^\[GROUP\|ADD:([a-zA-Z0-9\-]{2,36})\|MEMBERS:([^\]]*)\]$")
 _CLIENT_GROUP_LEAVE_PATTERN = re.compile(r"^\[GROUP\|LEAVE:([a-zA-Z0-9\-]{2,36})\]$")
+_CLIENT_BLOCK_USER_PATTERN = re.compile(r"^\[BLOCK\|USER:([^\]:\|]+)\]$")
+_CLIENT_UNBLOCK_USER_PATTERN = re.compile(r"^\[BLOCK\|REMOVE:([^\]:\|]+)\]$")
 _CLIENT_GROUP_CHAT_PATTERN = re.compile(r"^\[GROUP\|MSG:([a-zA-Z0-9\-]{2,36})\]: (.+)$", re.DOTALL)
 _CLIENT_DM_PATTERN = re.compile(r"^@(?!ai\b)(\S+)\s+(.*)", re.IGNORECASE | re.DOTALL)
 _CLIENT_PUBLIC_CHAT_PATTERN = re.compile(r"^\[(.+?)\]: (.+)$", re.DOTALL)
@@ -208,6 +218,14 @@ def parse_client_message(message: str) -> ParsedMessage:
     match = _CLIENT_GROUP_LEAVE_PATTERN.match(message)
     if match:
         return ParsedMessage(MessageKind.GROUP_LEAVE, {"group_id": match.group(1)})
+
+    match = _CLIENT_BLOCK_USER_PATTERN.match(message)
+    if match:
+        return ParsedMessage(MessageKind.BLOCK_USER, {"target_username": match.group(1).strip()})
+
+    match = _CLIENT_UNBLOCK_USER_PATTERN.match(message)
+    if match:
+        return ParsedMessage(MessageKind.UNBLOCK_USER, {"target_username": match.group(1).strip()})
 
     match = _CLIENT_GROUP_CHAT_PATTERN.match(message)
     if match:

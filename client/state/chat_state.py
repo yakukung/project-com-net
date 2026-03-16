@@ -13,6 +13,7 @@ def initialize_client_state(app) -> None:
     app.unread_dms = {}
     app.dm_buttons = {}
     app.group_channel_buttons = {}
+    app.blocked_usernames = set()
 
 
 def reset_runtime_state(app) -> None:
@@ -23,3 +24,4 @@ def reset_runtime_state(app) -> None:
     app.online_users = []
     app.dm_tabs = {}
     app.active_tab = "group"
+    app.blocked_usernames = set()

@@ -4,6 +4,11 @@ from shared.messages import parse_server_message
 
 
 def _handle_dm_received(app, sender: str, text: str) -> None:
+    blocked = getattr(app, "blocked_usernames", set())
+    blocked_lower = {name.lower() for name in blocked}
+    if sender.lower() in blocked_lower:
+        return
+
     if sender not in app.dm_tabs:
         app._create_dm_tab(sender)
 
@@ -22,6 +27,11 @@ def _handle_dm_received(app, sender: str, text: str) -> None:
 
 
 def _handle_dm_sent(app, recipient: str, text: str) -> None:
+    blocked = getattr(app, "blocked_usernames", set())
+    blocked_lower = {name.lower() for name in blocked}
+    if recipient.lower() in blocked_lower:
+        return
+
     if recipient not in app.dm_tabs:
         app._create_dm_tab(recipient)
 
@@ -112,6 +122,7 @@ def dispatch_server_message(app, message: str) -> str:
                 app._on_kick_group_member,
                 app._on_transfer_group_owner,
                 app._on_click_add_member,
+                app._on_delete_group_by_id,
             )
 
         app.after(0, show_members)
